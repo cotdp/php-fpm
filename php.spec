@@ -21,7 +21,7 @@
 Summary: PHP scripting language for creating dynamic web sites
 Name: php
 Version: 5.3.6
-Release: 1%{?dist}
+Release: 2%{?dist}
 License: PHP
 Group: Development/Languages
 URL: http://www.php.net/
@@ -87,6 +87,7 @@ Group: Development/Languages
 Summary: Command-line interface for PHP
 Requires: php-common = %{version}-%{release}
 Provides: php-cgi = %{version}-%{release}
+Provides: php-fpm = %{version}-%{release}
 Provides: php-pcntl, php-readline
 
 %description cli
@@ -458,7 +459,7 @@ cp ext/ereg/regex/COPYRIGHT regex_COPYRIGHT
 cp ext/gd/libgd/README gd_README
 
 # Multiple builds for multiple SAPIs
-mkdir build-cgi build-apache build-embedded build-zts
+mkdir build-cgi build-fpm build-apache build-embedded build-zts
 
 # Remove bogus test; position of read position after fopen(, "a+")
 # is not defined by C standard, so don't presume anything.
@@ -649,6 +650,59 @@ build --enable-force-cgi-redirect \
       --with-recode=shared,%{_prefix}
 popd
 
+
+# Build /usr/bin/php-fpm with the CGI SAPI (FPM), and all the shared extensions
+pushd build-fpm
+build --enable-force-cgi-redirect \
+      --enable-pcntl \
+      --with-imap=shared --with-imap-ssl \
+      --enable-mbstring=shared \
+      --enable-mbregex \
+      --with-gd=shared \
+      --enable-bcmath=shared \
+      --enable-dba=shared --with-db4=%{_prefix} \
+      --with-xmlrpc=shared \
+      --with-ldap=shared --with-ldap-sasl \
+      --with-mysql=shared,%{_prefix} \
+      --with-mysqli=shared,%{mysql_config} \
+      --with-interbase=shared,%{_libdir}/firebird \
+      --with-pdo-firebird=shared,%{_libdir}/firebird \
+      --enable-dom=shared \
+      --with-pgsql=shared \
+      --enable-wddx=shared \
+      --with-snmp=shared,%{_prefix} \
+      --enable-soap=shared \
+      --with-xsl=shared,%{_prefix} \
+      --enable-xmlreader=shared --enable-xmlwriter=shared \
+      --with-curl=shared,%{_prefix} \
+      --enable-fastcgi \
+      --enable-fpm \
+      --enable-pdo=shared \
+      --with-pdo-odbc=shared,unixODBC,%{_prefix} \
+      --with-pdo-mysql=shared,%{mysql_config} \
+      --with-pdo-pgsql=shared,%{_prefix} \
+      --with-pdo-sqlite=shared,%{_prefix} \
+      --with-pdo-dblib=shared,%{_prefix} \
+      --with-sqlite3=shared,%{_prefix} \
+      --enable-json=shared \
+      --enable-zip=shared \
+      --without-readline \
+      --with-libedit \
+      --with-pspell=shared \
+      --enable-phar=shared \
+      --with-mcrypt=shared,%{_prefix} \
+      --with-tidy=shared,%{_prefix} \
+      --with-mssql=shared,%{_prefix} \
+      --enable-sysvmsg=shared --enable-sysvshm=shared --enable-sysvsem=shared \
+      --enable-posix=shared \
+      --with-unixODBC=shared,%{_prefix} \
+      --enable-fileinfo=shared \
+      --enable-intl=shared \
+      --with-icu-dir=%{_prefix} \
+      --with-enchant=shared,%{_prefix} \
+      --with-recode=shared,%{_prefix}
+popd
+
 without_shared="--without-mysql --without-gd \
       --disable-dom --disable-dba --without-unixODBC \
       --disable-pdo --disable-xmlreader --disable-xmlwriter \
@@ -706,6 +760,12 @@ make -C build-embedded install-sapi install-headers INSTALL_ROOT=$RPM_BUILD_ROOT
 
 # Install everything from the CGI SAPI build
 make -C build-cgi install INSTALL_ROOT=$RPM_BUILD_ROOT 
+
+# Install everything from the CGI SAPI (FPM) build
+make -C build-fpm install INSTALL_ROOT=$RPM_BUILD_ROOT 
+mkdir -p $RPM_BUILD_ROOT/etc/init.d
+cp -f build-fpm/sapi/fpm/init.d.php-fpm $RPM_BUILD_ROOT/etc/init.d/php-fpm
+chmod 755 $RPM_BUILD_ROOT/etc/init.d/php-fpm
 
 # Install the default configuration file and icons
 install -m 755 -d $RPM_BUILD_ROOT%{_sysconfdir}/
@@ -826,12 +886,16 @@ rm files.* macros.php
 %defattr(-,root,root)
 %{_bindir}/php
 %{_bindir}/php-cgi
+%{_sbindir}/php-fpm
+%{_sysconfdir}/php-fpm.conf.default
+%{_sysconfdir}/init.d/php-fpm
 %{_bindir}/phar.phar
 %{_bindir}/phar
 # provides phpize here (not in -devel) for pecl command
 %{_bindir}/phpize
 %{_mandir}/man1/php.1*
 %{_mandir}/man1/phpize.1*
+%{_mandir}/man8/php-fpm.8*
 %doc sapi/cgi/README* sapi/cli/README
 
 %files zts
