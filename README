@@ -1,0 +1,11 @@
+This repository contains a hacked spec file for php, to use it do the following.
+
+1. Install php source "yumdownloader --source php" which should get you the latest,
+
+2. "rpm -i php-5.3.6-1.fc14.src.rpm" to install the source into $HOME/rpmbuild,
+
+3. Replace the file $HOME/rpmbuild/SPECS/php.spec with the php.spec from here,
+
+4. "cd rpmbuild" and run the builder "rpmbuild -ba SPECS/php.spec",
+
+The resulting "php-cli" package will now include the php-fpm stuff, its man pages, init script and conf template.
